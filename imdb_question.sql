@@ -13,7 +13,8 @@ USE imdb;
 
 -- Q1. Find the total number of rows in each table of the schema?
 -- Type your code below:
-
+SELECT table_name, table_rows from INFORMATION_SCHEMA.tables
+WHERE TABLE_SCHEMA = 'imdb';
 
 
 
