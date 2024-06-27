@@ -1,3 +1,6 @@
+## Start sql using docker
+```docker compose up```
+
 ## Import data to Mysql
 Using ```IMDB dataset import.sql``` and run it in DB interface.
 
