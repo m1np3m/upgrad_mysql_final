@@ -314,7 +314,26 @@ Now, let’s find out the top 10 movies based on average rating.*/
 +---------------+-------------------+---------------------+*/
 -- Type your code below:
 -- It's ok if RANK() or DENSE_RANK() is used too
-
+with top_10_movies as (
+SELECT
+	m.title as title,
+	AVG(r.avg_rating) as avg_rating
+FROM
+	ratings r
+join movie m on
+	r.movie_id = m.id
+group by
+	r.movie_id
+order by
+	r.avg_rating desc
+limit 10)
+select
+	title,
+	avg_rating,
+	RANK() OVER(
+	ORDER by avg_rating) as 'movie_rank'
+from
+	top_10_movies
 
 
 
@@ -338,7 +357,14 @@ Summarising the ratings table based on the movie counts by median rating can giv
 +---------------+-------------------+ */
 -- Type your code below:
 -- Order by is good to have
-
+select
+	median_rating,
+	count(movie_id) as movie_count
+FROM
+	ratings r
+group by
+	median_rating
+ORDER by count(movie_id) desc
 
 
 
@@ -359,6 +385,39 @@ Now, let's find out the production house with which RSVP Movies can partner for 
 | The Archers	   |		1		   |			1	  	 |
 +------------------+-------------------+---------------------+*/
 -- Type your code below:
+with production_companies_having_most_hit as (
+SELECT
+	DISTINCT m.production_company as production_companies
+from
+	movie m
+join ratings r on
+	m.id = r.movie_id
+where
+	r.avg_rating > 8
+GROUP by
+	m.production_company),
+movies_count_by_most_hit_companies as (
+select
+		m.production_company as production_company,
+		count(m.id) as movie_count
+from
+		movie m
+where
+		m.production_company in (
+	SELECT
+			production_companies
+	from
+			production_companies_having_most_hit)
+group by
+		m.production_company )
+select
+	production_company,
+	movie_count ,
+	rank() over(
+order by
+	movie_count) as 'prod_company_rank'
+from
+	movies_count_by_most_hit_companies
 
 
 
@@ -382,8 +441,14 @@ Now, let's find out the production house with which RSVP Movies can partner for 
 |	.			|		.			|
 +---------------+-------------------+ */
 -- Type your code below:
-
-
+select g.genre, count(m.id) as movie_count
+from movie m join ratings r on m.id = r.movie_id  join genre g on g.movie_id = m.id 
+where 
+ MONTH(m.date_published) = 3 AND 
+ YEAR(m.date_published) = 2017 AND 
+ m.country = 'USA' AND 
+ r.total_votes > 1000
+group by g.genre 
 
 
 
@@ -403,7 +468,12 @@ Now, let's find out the production house with which RSVP Movies can partner for 
 |	.			|		.			|			.		  |
 +---------------+-------------------+---------------------+*/
 -- Type your code below:
-
+select m.title ,r.avg_rating, g.genre
+from movie m join ratings r on m.id = r.movie_id  join genre g on g.movie_id = m.id 
+where 
+ m.title like 'The%' AND 
+ r.avg_rating > 8
+order by r.avg_rating desc
 
 
 
