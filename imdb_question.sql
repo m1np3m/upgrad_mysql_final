@@ -13,7 +13,8 @@ USE imdb;
 
 -- Q1. Find the total number of rows in each table of the schema?
 -- Type your code below:
-
+SELECT table_name, table_rows from INFORMATION_SCHEMA.tables
+WHERE TABLE_SCHEMA = 'imdb';
 
 
 
@@ -24,8 +25,18 @@ USE imdb;
 
 -- Q2. Which columns in the movie table have null values?
 -- Type your code below:
+SELECT
+		SUM(CASE WHEN id IS NULL THEN 1 ELSE 0 END) AS id_null_count, 
+		SUM(CASE WHEN title IS NULL THEN 1 ELSE 0 END) AS title_null_count, 
+		SUM(CASE WHEN year IS NULL THEN 1 ELSE 0 END) AS year_null_count,
+		SUM(CASE WHEN date_published IS NULL THEN 1 ELSE 0 END) AS date_published_null_count,
+		SUM(CASE WHEN duration IS NULL THEN 1 ELSE 0 END) AS duration_null_count,
+		SUM(CASE WHEN country IS NULL THEN 1 ELSE 0 END) AS country_null_count,
+		SUM(CASE WHEN worlwide_gross_income IS NULL THEN 1 ELSE 0 END) AS worlwide_gross_income_null_count,
+		SUM(CASE WHEN languages IS NULL THEN 1 ELSE 0 END) AS languages,
+		SUM(CASE WHEN production_company IS NULL THEN 1 ELSE 0 END) AS production_company_null_count
 
-
+FROM movie;
 
 
 
@@ -56,7 +67,23 @@ Output format for the second part of the question:
 |	.			|		.			|
 +---------------+-------------------+ */
 -- Type your code below:
+--fist part
+SELECT
+		YEAR(date_published) as Year,
+	count(*) as number_of_movies
+FROM
+	movie
+group by
+	date_published;
 
+-- second part
+SELECT
+		MONTH(date_published) as month_num,
+	count(*) as number_of_movies
+FROM
+	movie
+group by
+	date_published;
 
 
 
@@ -72,7 +99,13 @@ We know USA and India produces huge number of movies each year. Lets find the nu
   
 -- Q4. How many movies were produced in the USA or India in the year 2019??
 -- Type your code below:
-
+SELECT
+		count(*) number_of_films
+FROM
+	movie
+WHERE 
+	country IN ('USA', 'India') AND 
+	YEAR(date_published) = 2019
 
 
 
@@ -88,7 +121,10 @@ Let’s find out the different genres in the dataset.*/
 
 -- Q5. Find the unique list of the genres present in the data set?
 -- Type your code below:
-
+select
+	count(DISTINCT genre)
+from
+	genre g ;
 
 
 
@@ -104,7 +140,15 @@ Combining both the movie and genres table can give more interesting insights. */
 
 -- Q6.Which genre had the highest number of movies produced overall?
 -- Type your code below:
-
+select
+	genre
+from
+	genre g
+group by
+	genre
+order by
+	COUNT(movie_id) DESC
+limit 1;
 
 
 
@@ -120,6 +164,19 @@ So, let’s find out the count of movies that belong to only one genre.*/
 
 -- Q7. How many movies belong to only one genre?
 -- Type your code below:
+with movies_1_genre as (
+select
+	count(DISTINCT movie_id)
+from
+	genre g
+group by
+	movie_id
+having
+	count(genre) = 1)
+select
+	count(*)
+from
+	movies_1_genre
 
 
 
@@ -148,6 +205,15 @@ Now, let's find out the possible duration of RSVP Movies’ next project.*/
 |	.			|		.			|
 +---------------+-------------------+ */
 -- Type your code below:
+SELECT
+	g.genre as genre,
+	AVG(m.duration) as avg_duration
+from
+	genre g
+join movie m on
+	g.movie_id = m.id
+GROUP by
+	g.genre;
 
 
 
@@ -171,7 +237,23 @@ Lets find where the movies of genre 'thriller' on the basis of number of movies.
 |drama			|	2312			|			2		  |
 +---------------+-------------------+---------------------+*/
 -- Type your code below:
-
+WITH genre_rankings AS(
+SELECT
+	genre,
+	count(movie_id) AS movie_count,
+	RANK() OVER(
+ORDER BY
+	count(movie_id) DESC) AS genre_rank
+FROM
+	genre
+GROUP BY
+	genre)
+SELECT
+	*
+FROM
+	genre_rankings
+WHERE
+	genre = 'Thriller'
 
 
 
@@ -202,7 +284,13 @@ To start with lets get the min and max values of different columns in the table*
 |		0		|			5		|	       177		  |	   2000	    		 |		0	       |	8			 |
 +---------------+-------------------+---------------------+----------------------+-----------------+-----------------+*/
 -- Type your code below:
-
+select MIN(avg_rating) as min_avg_rating, 
+		MAX(avg_rating) as max_avg_rating, 
+		MIN(total_votes) as min_total_votes,
+		MAX(total_votes) as max_total_votes,
+		MIN(median_rating) as min_median_rating,
+		MAX(median_rating) as max_median_rating 
+from ratings r 
 
 
 
@@ -226,7 +314,26 @@ Now, let’s find out the top 10 movies based on average rating.*/
 +---------------+-------------------+---------------------+*/
 -- Type your code below:
 -- It's ok if RANK() or DENSE_RANK() is used too
-
+with top_10_movies as (
+SELECT
+	m.title as title,
+	AVG(r.avg_rating) as avg_rating
+FROM
+	ratings r
+join movie m on
+	r.movie_id = m.id
+group by
+	r.movie_id
+order by
+	r.avg_rating desc
+limit 10)
+select
+	title,
+	avg_rating,
+	RANK() OVER(
+	ORDER by avg_rating) as 'movie_rank'
+from
+	top_10_movies
 
 
 
@@ -250,7 +357,14 @@ Summarising the ratings table based on the movie counts by median rating can giv
 +---------------+-------------------+ */
 -- Type your code below:
 -- Order by is good to have
-
+select
+	median_rating,
+	count(movie_id) as movie_count
+FROM
+	ratings r
+group by
+	median_rating
+ORDER by count(movie_id) desc
 
 
 
@@ -271,6 +385,39 @@ Now, let's find out the production house with which RSVP Movies can partner for 
 | The Archers	   |		1		   |			1	  	 |
 +------------------+-------------------+---------------------+*/
 -- Type your code below:
+with production_companies_having_most_hit as (
+SELECT
+	DISTINCT m.production_company as production_companies
+from
+	movie m
+join ratings r on
+	m.id = r.movie_id
+where
+	r.avg_rating > 8
+GROUP by
+	m.production_company),
+movies_count_by_most_hit_companies as (
+select
+		m.production_company as production_company,
+		count(m.id) as movie_count
+from
+		movie m
+where
+		m.production_company in (
+	SELECT
+			production_companies
+	from
+			production_companies_having_most_hit)
+group by
+		m.production_company )
+select
+	production_company,
+	movie_count ,
+	rank() over(
+order by
+	movie_count) as 'prod_company_rank'
+from
+	movies_count_by_most_hit_companies
 
 
 
@@ -294,8 +441,14 @@ Now, let's find out the production house with which RSVP Movies can partner for 
 |	.			|		.			|
 +---------------+-------------------+ */
 -- Type your code below:
-
-
+select g.genre, count(m.id) as movie_count
+from movie m join ratings r on m.id = r.movie_id  join genre g on g.movie_id = m.id 
+where 
+ MONTH(m.date_published) = 3 AND 
+ YEAR(m.date_published) = 2017 AND 
+ m.country = 'USA' AND 
+ r.total_votes > 1000
+group by g.genre 
 
 
 
@@ -315,6 +468,12 @@ Now, let's find out the production house with which RSVP Movies can partner for 
 |	.			|		.			|			.		  |
 +---------------+-------------------+---------------------+*/
 -- Type your code below:
+select m.title ,r.avg_rating, g.genre
+from movie m join ratings r on m.id = r.movie_id  join genre g on g.movie_id = m.id 
+where 
+ m.title like 'The%' AND 
+ r.avg_rating > 8
+order by r.avg_rating desc
 
 
 
